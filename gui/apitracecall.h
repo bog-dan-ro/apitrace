@@ -233,6 +233,9 @@ public:
         return m_state && !m_state->isEmpty();
     }
 
+    void setThumbnail(const QImage & thumbnail);
+    const QImage & thumbnail() const;
+
 protected:
     int m_type : 4;
     mutable bool m_hasBinaryData;
@@ -240,6 +243,8 @@ protected:
     ApiTraceState *m_state;
 
     mutable QStaticText *m_staticText;
+
+    QImage m_thumbnail;
 };
 Q_DECLARE_METATYPE(ApiTraceEvent*);
 
@@ -363,9 +368,6 @@ public:
     void setLastCallIndex(unsigned index);
     unsigned lastCallIndex() const;
 
-    void setThumbnail(const QImage & thumbnail);
-    const QImage & thumbnail() const;
-
 private:
     ApiTrace *m_parentTrace;
     quint64 m_binaryDataSize;
@@ -374,7 +376,6 @@ private:
     bool m_loaded;
     unsigned m_callsToLoad;
     unsigned m_lastCallIndex;
-    QImage m_thumbnail;
 };
 Q_DECLARE_METATYPE(ApiTraceFrame*);
 
