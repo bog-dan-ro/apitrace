@@ -383,7 +383,7 @@ void Retracer::run()
      * Process standard output
      */
 
-    QList<QImage> thumbnails;
+    ImageHash thumbnails;
     QVariantMap parsedJson;
     trace::Profile* profile = NULL;
 
@@ -467,7 +467,7 @@ void Retracer::run()
                 }
 
                 QImage thumb = thumbnail(snapshot);
-                thumbnails.append(thumb);
+                thumbnails.insert(info.commentNumber, thumb);
             }
 
             Q_ASSERT(process.state() != QProcess::Running);
