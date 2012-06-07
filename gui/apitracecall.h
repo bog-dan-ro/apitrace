@@ -307,9 +307,11 @@ public:
 
     void missingThumbnail();
 
+    bool isDrawCall() const;
 private:
     void loadData(TraceLoader *loader,
                   const trace::Call *tcall);
+
 private:
     int m_index;
     unsigned m_thread;

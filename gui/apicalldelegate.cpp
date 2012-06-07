@@ -60,7 +60,7 @@ void ApiCallDelegate::paint(QPainter *painter,
             if (!thumbnail.isNull()) {
                 painter->drawImage(offset, thumbnail);
                 offset += QPoint(textSize.height() + thumbnail.width(), option.rect.height()/2 - textSize.height()/2);
-            } else {
+            } else if (call->isDrawCall()) {
             	call->missingThumbnail();
             }
             if (call->hasError()) {

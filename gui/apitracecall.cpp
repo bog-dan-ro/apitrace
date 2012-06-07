@@ -1132,6 +1132,26 @@ void ApiTraceCall::missingThumbnail()
     m_parentFrame->parentTrace()->missingThumbnail(this);
 }
 
+bool ApiTraceCall::isDrawCall() const
+{
+	QString function = m_signature->name();
+
+	if (function.contains(QLatin1String("glDraw"))) {
+		return true;
+	} else if (function.contains(QLatin1String("glVertex"))) {
+		return true;
+	} else if (function.contains(QLatin1String("glBegin"))) {
+		return true;
+	} else if (function.contains(QLatin1String("glEnd"))) {
+		return true;
+	} else if (function.contains(QLatin1String("glCallList"))) {
+		return true;
+	} else if (function.contains(QLatin1String("glClear"))) {
+		return true;
+	}
+
+	return false;
+}
 
 ApiTraceFrame::ApiTraceFrame(ApiTrace *parentTrace)
     : ApiTraceEvent(ApiTraceEvent::Frame),
