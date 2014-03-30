@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 2.8.8)
 
 
 # Use clang on MacOSX. gcc doesn't support __thread key, and Apple has
@@ -69,7 +69,8 @@ if (ENABLE_GUI)
     if (NOT (ENABLE_GUI STREQUAL "AUTO"))
         set (REQUIRE_GUI REQUIRED)
     endif ()
-    find_package (Qt4 4.7 COMPONENTS QtCore QtGui QtWebKit ${REQUIRE_GUI})
+    find_package (Qt5Widgets REQUIRED)
+    find_package (Qt5WebKitWidgets REQUIRED)
 endif ()
 
 if (WIN32)
@@ -296,19 +297,6 @@ add_subdirectory (thirdparty/md5)
 set (MD5_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/md5)
 set (MD5_LIBRARIES md5_bundled)
 
-# Always use bundled QJSon.
-# - The packaged versions QJson are very old, and do not support NaN/Infinity.
-# - To make it easier to build the GUI on Windows and MacOSX, as there are no
-# binaries at all.
-if (QT4_FOUND)
-    add_definitions (-DQJSON_EXPORT=)
-    add_subdirectory (thirdparty/qjson)
-    set (QJSON_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty)
-    set (QJSON_LIBRARY_DIRS)
-    set (QJSON_LIBRARIES qjson_bundled)
-    set (QJSON_FOUND TRUE)
-endif ()
-
 # We use bundled headers for all Khronos APIs, to guarantee support for both
 # OpenGL and OpenGL ES at build time, because the OpenGL and OpenGL ES 1 APIs
 # are so intertwined that conditional compilation extremely difficult. This
@@ -419,8 +407,8 @@ endif ()
 ##############################################################################
 # GUI
 
-if (ENABLE_GUI AND QT4_FOUND AND QJSON_FOUND)
-    add_subdirectory(gui)
+if (ENABLE_GUI AND Qt5Widgets_FOUND AND Qt5WebKitWidgets_FOUND)
+  add_subdirectory(gui)
 endif ()
 
 
