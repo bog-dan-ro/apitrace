@@ -7,23 +7,20 @@ Requirements
 
 Requirements common for all platforms:
 
-* Python version 2.6 or 2.7
+* Python version 2.7
 
   * Python Image Library
 
-* CMake version 2.8 or higher (tested with version 2.8)
+* CMake version 2.8.8 or higher (tested with version 2.8.12.2)
 
 
 The GUI also dependends on:
 
-* Qt version 4.7 or higher (tested with version 4.8)
+* Qt version 5.2.1 or higher (tested with version 5.2.1)
 
-* QJSON version 0.5 or higher (tested with version 0.7.1, which is bundled)
-
-Qt and QJSON will be required if `-DENABLE_GUI=TRUE` is passed to CMake, and
-never used if `-DENABLE_GUI=FALSE` is passed instead.  The implicit default is
-`-DENABLE_GUI=AUTO`, which will build the GUI if Qt is available, using the
-bundled QJSON if it is not found on the system.
+Qt will be required if `-DENABLE_GUI=TRUE` is passed to CMake, and never used
+if `-DENABLE_GUI=FALSE` is passed instead.  The implicit default is
+`-DENABLE_GUI=AUTO`, which will build the GUI if Qt is available.
 
 
 The code also depends on zlib, libpng, and snappy libraries, but the bundled
@@ -32,7 +29,7 @@ shared-objects/DLL self contained, and to prevent symbol collisions when
 tracing.
 
 
-Linux / Mac OS X
+Linux
 ----------------
 
 Additional optional dependencies for Linux:
@@ -65,6 +62,15 @@ The `/usr/lib32` refers to the path where the 32-bits shared objects are may
 differ depending on the actual Linux distribution.
 
 
+Mac OS X
+----------------
+
+Build as:
+
+    cmake -H. -Bbuild -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_PREFIX_PATH=~/Qt5.2.1/5.2.1/clang_64
+    make -C build
+
+
 Android
 -------
 
@@ -80,6 +86,7 @@ Build as:
 
 You can also choose a particular ABI by passing `ANDROID_ABI` variable to
 cmake, e.g., `-DANDROID_ABI=x86`.
+
 
 FirefoxOS
 ---------
@@ -102,8 +109,8 @@ Additional requirements:
 
 * Other:
 
-  * Microsoft Visual Studio (tested with 2010 version) or MinGW (tested with
-    mingw-w64's gcc version 4.6.2)
+  * Microsoft Visual Studio (tested with Visual Studio 2012) or MinGW (tested
+    with mingw-w64's gcc version 4.8.2)
 
   * [Microsoft DirectX SDK](http://msdn.microsoft.com/en-us/directx/aa937781):
 
@@ -116,7 +123,7 @@ Additional requirements:
 
 To build with Visual Studio first invoke CMake GUI as:
 
-    cmake-gui -H%cd% -B%cd%\build
+    cmake-gui -H%cd% -B%cd%\build -DCMAKE_PREFIX_PATH=C:\Qt\Qt5.2.1\5.2.1\msvc2012
 
 and press the _Configure_ button.
 
