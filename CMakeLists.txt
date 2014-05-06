@@ -65,6 +65,7 @@ endif ()
 find_host_package (PythonInterp REQUIRED)
 find_package (Threads)
 
+
 if (ENABLE_GUI)
     if (NOT (ENABLE_GUI STREQUAL "AUTO"))
         set (REQUIRE_GUI REQUIRED)
@@ -72,8 +73,8 @@ if (ENABLE_GUI)
     if (POLICY CMP0020)
         cmake_policy (SET CMP0020 NEW)
     endif()
-    find_package (Qt5Widgets REQUIRED)
-    find_package (Qt5WebKitWidgets REQUIRED)
+    find_package (Qt5Widgets ${REQUIRE_GUI})
+    find_package (Qt5WebKitWidgets ${REQUIRE_GUI})
 endif ()
 
 if (WIN32)
