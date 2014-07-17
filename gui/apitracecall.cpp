@@ -1127,6 +1127,11 @@ bool ApiTraceCall::contains(const QString &str,
     return txt.contains(str, sensitivity);
 }
 
+void ApiTraceCall::missingThumbnail()
+{
+    m_parentFrame->parentTrace()->missingThumbnail(this);
+}
+
 
 ApiTraceFrame::ApiTraceFrame(ApiTrace *parentTrace)
     : ApiTraceEvent(ApiTraceEvent::Frame),
@@ -1325,4 +1330,9 @@ unsigned ApiTraceFrame::lastCallIndex() const
     } else {
         return m_lastCallIndex;
     }
+}
+
+void ApiTraceFrame::missingThumbnail()
+{
+    m_parentTrace->missingThumbnail(this);
 }
