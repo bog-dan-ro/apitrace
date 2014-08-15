@@ -93,11 +93,6 @@ class D3DCommonTracer(DllTracer):
         d3d11.ID3D11Resource,
     )
 
-    bufferInterfaceNames = (
-        'ID3D10Buffer',
-        'ID3D11Buffer'
-    )
-    
     def enumWrapperInterfaceVariables(self, interface):
         variables = DllTracer.enumWrapperInterfaceVariables(self, interface)
         
@@ -105,11 +100,8 @@ class D3DCommonTracer(DllTracer):
         if interface.hasBase(*self.mapInterfaces):
             variables += [
                 ('_MAP_DESC', '_MapDesc', None),
+                ('MemoryShadow', '_MapShadow', None),
             ]
-            if interface.name in self.bufferInterfaceNames:
-                variables += [
-                    ('MemoryShadow', '_MapShadow', None),
-                ]
 
         return variables
 
@@ -128,10 +120,11 @@ class D3DCommonTracer(DllTracer):
             print '    _MAP_DESC _MapDesc = %s->_MapDesc;' % pResource
             #print r'    os::log("%%p -> %%p+%%lu\n", %s,_MapDesc.pData, (unsigned long)_MapDesc.Size);' % pResource
             print '    if (_MapDesc.Size && _MapDesc.pData) {'
-            if interface.name in self.bufferInterfaceNames:
-                print '        _MapShadow.update(trace::fakeMemcpy);'
-            else:
-                self.emit_memcpy('_MapDesc.pData', '_MapDesc.Size')
+            print '        if (_shouldShadowMap(%s->m_pInstance)) {' % pResource
+            print '            %s->_MapShadow.update(trace::fakeMemcpy);' % pResource
+            print '        } else {'
+            self.emit_memcpy('_MapDesc.pData', '_MapDesc.Size')
+            print '        }'
             print '    }'
 
         DllTracer.implementWrapperInterfaceMethodBody(self, interface, base, method)
@@ -141,8 +134,9 @@ class D3DCommonTracer(DllTracer):
             print '    _MAP_DESC _MapDesc;'
             print '    if (SUCCEEDED(_result)) {'
             print '        _getMapDesc(_this, %s, _MapDesc);' % ', '.join(method.argNames())
-            if interface.name in self.bufferInterfaceNames:
-                print '        _MapShadow.cover(_MapDesc.pData, _MapDesc.Size);'
+            print '        if (_shouldShadowMap(%s->m_pInstance)) {' % pResource
+            print '            %s->_MapShadow.cover(_MapDesc.pData, _MapDesc.Size);' %pResource
+            print '        }'
             print '    } else {'
             print '        _MapDesc.pData = NULL;'
             print '        _MapDesc.Size = 0;'

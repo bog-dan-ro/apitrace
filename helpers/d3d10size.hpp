@@ -85,6 +85,28 @@ _getNumSubResources(const D3D10_TEXTURE3D_DESC *pDesc) {
     return _getNumMipLevels(pDesc);
 }
 
+
+inline bool
+_shouldShadowMap(IDXGISurface *pSurface)
+{
+    return false;
+}
+
+inline bool
+_shouldShadowMap(ID3D10Resource *pResource)
+{
+    D3D10_RESOURCE_DIMENSION Type = D3D10_RESOURCE_DIMENSION_UNKNOWN;
+    pResource->GetType(&Type);
+    return Type == D3D10_RESOURCE_DIMENSION_BUFFER;
+}
+
+inline bool
+_getResourceType(ID3D10Buffer *pResource)
+{
+    return true;
+}
+
+
 static inline size_t
 _calcSubresourceSize(const D3D10_BUFFER_DESC *pDesc, UINT Subresource, UINT RowPitch = 0, UINT SlicePitch = 0) {
     return pDesc->ByteWidth;
