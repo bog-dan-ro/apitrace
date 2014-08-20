@@ -135,7 +135,9 @@ class D3DCommonTracer(DllTracer):
             print '    if (SUCCEEDED(_result)) {'
             print '        _getMapDesc(_this, %s, _MapDesc);' % ', '.join(method.argNames())
             print '        if (_shouldShadowMap(%s->m_pInstance)) {' % pResource
-            print '            %s->_MapShadow.cover(_MapDesc.pData, _MapDesc.Size);' %pResource
+            if not interface.name.startswith('IDXGI'):
+                print '            bool _discard = MapType == 4 /* D3D1[01]_MAP_WRITE_DISCARD */;'
+                print '            %s->_MapShadow.cover(_MapDesc.pData, _MapDesc.Size, _discard);' %pResource
             print '        }'
             print '    } else {'
             print '        _MapDesc.pData = NULL;'

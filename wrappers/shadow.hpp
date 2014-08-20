@@ -53,7 +53,7 @@ public:
 
     typedef void (*Callback)(const void *ptr, size_t size);
 
-    void cover(const void *ptr, size_t size);
+    void cover(void *ptr, size_t size, bool discard);
 
     void update(Callback callback) const;
 };
