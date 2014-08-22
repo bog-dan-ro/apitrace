@@ -33,6 +33,18 @@
 #include <algorithm>
 
 
+// We must reset the data on discard, otherwise the old data could match just
+// by chance.
+//
+// XXX: if the appplication writes 0xCDCDCDCD at the start or the end of the
+// buffer range, we'll fail to detect.  The only way to be 100% sure things
+// won't fall through would be to setup memory traps.
+void MemoryShadow::zero(void *_ptr, size_t _size)
+{
+    memset(_ptr, 0xCD, _size);
+}
+
+
 void MemoryShadow::cover(void *_ptr, size_t _size, bool _discard)
 {
     if (_size != size) {
@@ -43,13 +55,8 @@ void MemoryShadow::cover(void *_ptr, size_t _size, bool _discard)
     realPtr = (const uint8_t *)_ptr;
 
     if (_discard) {
-        // We must reset the data on discard, otherwise the old data could
-        // match just by chance.  XXX: if the appplication writes 0xCDCDCDCD at
-        // the start or the end of the buffer range, we'll fail to detect.  The
-        // only way to be 100% sure things won't fall through would be to setup
-        // memory traps.
-        memset(_ptr, 0xCD, size);
-        memset(shadowPtr, 0xCD, size);
+        zero(_ptr, size);
+        zero(shadowPtr, size);
     } else {
         memcpy(shadowPtr, realPtr, size);
     }

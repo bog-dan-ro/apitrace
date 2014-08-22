@@ -30,6 +30,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 
 class MemoryShadow
@@ -52,6 +53,8 @@ public:
     }
 
     typedef void (*Callback)(const void *ptr, size_t size);
+
+    static void zero(void *_ptr, size_t _size);
 
     void cover(void *ptr, size_t size, bool discard);
 
