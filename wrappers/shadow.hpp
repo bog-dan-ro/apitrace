@@ -33,23 +33,28 @@
 #include <string.h>
 
 
+uint32_t
+hashBlock(const void *p);
+
+
 class MemoryShadow
 {
     size_t size;
+    size_t nBlocks;
     const uint8_t *realPtr;
-    uint8_t *shadowPtr;
+    uint32_t *hashPtr;
 
 public:
     MemoryShadow() :
         size(0),
         realPtr(0),
-        shadowPtr(0)
+        hashPtr(0)
     {
     }
 
     ~MemoryShadow()
     {
-        free(shadowPtr);
+        free(hashPtr);
     }
 
     typedef void (*Callback)(const void *ptr, size_t size);

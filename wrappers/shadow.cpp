@@ -29,38 +29,35 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <algorithm>
 
-
-// We must reset the data on discard, otherwise the old data could match just
-// by chance.
-//
-// XXX: if the appplication writes 0xCDCDCDCD at the start or the end of the
-// buffer range, we'll fail to detect.  The only way to be 100% sure things
-// won't fall through would be to setup memory traps.
-void MemoryShadow::zero(void *_ptr, size_t _size)
-{
-    memset(_ptr, 0xCD, _size);
-}
+#include "crc32c.hpp"
 
 
-void MemoryShadow::cover(void *_ptr, size_t _size, bool _discard)
-{
-    if (_size != size) {
-        shadowPtr = (uint8_t *)realloc(shadowPtr, _size);
-        size = _size;
-    }
+#if \
+    defined(__i386__) /* gcc */ || defined(_M_IX86) /* msvc */ || \
+    defined(__x86_64__) /* gcc */ || defined(_M_X64) /* msvc */ || defined(_M_AMD64) /* msvc */
+#include <emmintrin.h>
+#define HAVE_SSE2
 
-    realPtr = (const uint8_t *)_ptr;
+// TODO: Detect and leverage SSE 4.1 and 4.2 at runtime
+//#define HAVE_SSE41
+//#define HAVE_SSE42
+#endif
 
-    if (_discard) {
-        zero(_ptr, size);
-        zero(shadowPtr, size);
-    } else {
-        memcpy(shadowPtr, realPtr, size);
-    }
-}
+
+#if defined(HAVE_SSE42)
+#include <nmmintrin.h>
+#elif defined(HAVE_SSE41)
+#include <smmintrin.h>
+#elif defined(HAVE_SSE2)
+#include <emmintrin.h>
+#endif
+
+
+#define BLOCK_SIZE 512
 
 
 template< class T >
@@ -79,42 +76,153 @@ rAlignPtr(T *p, uintptr_t alignment)
 }
 
 
+inline uint32_t
+mm_crc32_u32(uint32_t crc, uint32_t current)
+{
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint32_t one = current ^ swap(crc);
+    crc  = crc32c_tables[0][ one      & 0xFF] ^
+           crc32c_tables[1][(one>> 8) & 0xFF] ^
+           crc32c_tables[2][(one>>16) & 0xFF] ^
+           crc32c_tables[3][(one>>24) & 0xFF];
+#else
+    uint32_t one = current ^ crc;
+    crc  = crc32c_tables[0][(one>>24) & 0xFF] ^
+           crc32c_tables[1][(one>>16) & 0xFF] ^
+           crc32c_tables[2][(one>> 8) & 0xFF] ^
+           crc32c_tables[3][ one      & 0xFF];
+#endif
+    return crc;
+}
+
+
+uint32_t
+hashBlock(const void *p)
+{
+    assert((intptr_t)p % BLOCK_SIZE == 0);
+
+    uint32_t crc;
+
+#ifndef HAVE_SSE2
+
+    crc = crc32c_4bytes(p, BLOCK_SIZE);
+
+#else
+    crc = 0;
+
+    __m128i *q = (__m128i *)(void *)p;
+
+    crc = ~crc;
+
+#ifdef HAVE_SSE41
+    #define mm_extract_epi32_0(x) _mm_extract_epi32(x, 0)
+    #define mm_extract_epi32_1(x) _mm_extract_epi32(x, 1)
+    #define mm_extract_epi32_2(x) _mm_extract_epi32(x, 2)
+    #define mm_extract_epi32_3(x) _mm_extract_epi32(x, 3)
+#else
+    #define _mm_stream_load_si128 _mm_load_si128
+    #define mm_extract_epi32_0(x) _mm_cvtsi128_si32(x)
+    #define mm_extract_epi32_1(x) _mm_cvtsi128_si32(_mm_shuffle_epi32(x,_MM_SHUFFLE(1,1,1,1)))
+    #define mm_extract_epi32_2(x) _mm_cvtsi128_si32(_mm_shuffle_epi32(x,_MM_SHUFFLE(2,2,2,2)))
+    #define mm_extract_epi32_3(x) _mm_cvtsi128_si32(_mm_shuffle_epi32(x,_MM_SHUFFLE(3,3,3,3)))
+#endif
+#ifndef HAVE_SSE42
+#define _mm_crc32_u32 mm_crc32_u32
+#endif
+
+    for (unsigned c = BLOCK_SIZE / (4 * sizeof *q); c; --c) {
+        __m128i m0 = _mm_stream_load_si128(q++);
+        __m128i m1 = _mm_stream_load_si128(q++);
+        __m128i m2 = _mm_stream_load_si128(q++);
+        __m128i m3 = _mm_stream_load_si128(q++);
+
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_0(m0));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_1(m0));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_2(m0));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_3(m0));
+
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_0(m1));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_1(m1));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_2(m1));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_3(m1));
+
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_0(m2));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_1(m2));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_2(m2));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_3(m2));
+
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_0(m3));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_1(m3));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_2(m3));
+        crc = _mm_crc32_u32(crc, mm_extract_epi32_3(m3));
+    }
+
+    crc = ~crc;
+#endif
+
+    return crc;
+}
+
+
+// We must reset the data on discard, otherwise the old data could match just
+// by chance.
+//
+// XXX: if the appplication writes 0xCDCDCDCD at the start or the end of the
+// buffer range, we'll fail to detect.  The only way to be 100% sure things
+// won't fall through would be to setup memory traps.
+void MemoryShadow::zero(void *_ptr, size_t _size)
+{
+    memset(_ptr, 0xCD, _size);
+}
+
+
+void MemoryShadow::cover(void *_ptr, size_t _size, bool _discard)
+{
+    if (_size != size) {
+        nBlocks = ((intptr_t)_ptr + _size + BLOCK_SIZE - 1)/BLOCK_SIZE - (intptr_t)_ptr/BLOCK_SIZE;
+
+        hashPtr = (uint32_t *)realloc(hashPtr, nBlocks * sizeof *hashPtr);
+        size = _size;
+    }
+
+    realPtr = (const uint8_t *)_ptr;
+
+    if (_discard) {
+        zero(_ptr, size);
+    }
+
+    const uint8_t *p = lAlignPtr((const uint8_t *)_ptr, BLOCK_SIZE);
+    if (_discard) {
+        hashPtr[0] = hashBlock(p);
+        for (size_t i = 1; i < nBlocks; ++i) {
+            hashPtr[i] = hashPtr[0];
+        }
+    } else {
+        for (size_t i = 0; i < nBlocks; ++i) {
+            hashPtr[i] = hashBlock(p);
+            p += BLOCK_SIZE;
+        }
+    }
+}
+
+
 void MemoryShadow::update(Callback callback) const
 {
-    const uint8_t *realStart   = realPtr;
-    const uint8_t *realStop    = realPtr   + size;
-    const uint8_t *shadowStart = shadowPtr;
-    const uint8_t *shadowStop  = shadowPtr + size;
+    const uint8_t *realStart   = realPtr   + size;
+    const uint8_t *realStop    = realPtr;
 
-    assert(realStart   <= realStop);
-    assert(shadowStart <= shadowStop);
-
-    // Shrink the start to skip unchanged bytes
-    while (realStart < realStop && *realStart == *shadowStart) {
-        ++realStart;
-        ++shadowStart;
+    const uint8_t *p = lAlignPtr(realPtr, BLOCK_SIZE);
+    for (size_t i = 0; i < nBlocks; ++i) {
+        uint32_t crc = hashBlock(p);
+        if (crc != hashPtr[i]) {
+            realStart = std::min(realStart, p);
+            realStop  = std::max(realStop,  p + BLOCK_SIZE);
+        }
+        p += BLOCK_SIZE;
     }
 
-    // Shrink the stop to skip unchanged bytes
-    while (realStart < realStop && realStop[-1] == shadowStop[-1]) {
-        --realStop;
-        --shadowStop;
-    }
-
-    assert(realStart   <= realStop);
-    assert(shadowStart <= shadowStop);
-
-    /*
-     * TODO: Consider 16 bytes alignment
-     * See also http://msdn.microsoft.com/en-gb/library/windows/desktop/bb205132.aspx
-     */
-    const uintptr_t alignment = 4;
-
-    realStart = std::max(lAlignPtr(realStart, alignment), realPtr);
-    realStop  = std::min(rAlignPtr(realStop,  alignment), realPtr + size);
-
-    assert(realStart   <= realStop);
-    assert(shadowStart <= shadowStop);
+    realStart = std::max(realStart, realPtr);
+    realStop  = std::min(realStop,  realPtr + size);
 
     // Update the rest
     if (realStart < realStop) {
