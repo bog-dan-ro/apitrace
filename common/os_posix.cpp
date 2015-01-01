@@ -311,7 +311,9 @@ signalHandler(int sig, siginfo_t *info, void *context)
 void
 setExceptionCallback(void (*callback)(void))
 {
+#ifndef __ANDROID__
     assert(!gCallback);
+#endif
     if (!gCallback) {
         gCallback = callback;
 
