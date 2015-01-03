@@ -28,7 +28,6 @@ SOURCES += \
 
 SOURCES += \
         $$PWD/../common/highlight.cpp \
-        $$PWD/../common/os_memory.cpp \
         $$PWD/../common/os_posix.cpp \
         $$PWD/../common/os_backtrace.cpp \
         $$PWD/../common/trace_callset.cpp \
