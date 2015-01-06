@@ -47,7 +47,8 @@ target_link_libraries (retrace_common
     ${SNAPPY_LIBRARIES}
     ${GETOPT_LIBRARIES}
 )
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+
+if (NOT ANDROID AND (${CMAKE_SYSTEM_NAME} MATCHES "Linux"))
     target_link_libraries (retrace_common rt)
 endif ()
 
@@ -157,7 +158,7 @@ if (ENABLE_EGL)
         target_link_libraries (eglretrace
             retrace_common
             glretrace_common
-        glhelpers
+            glhelpers
             glproc_egl
             ${Waffle_LIBRARY}
             ${X11_X11_LIB}
@@ -171,6 +172,7 @@ if (ENABLE_EGL)
         target_link_libraries (retrace
             retrace_common
             glretrace_common
+            glhelpers
             glproc_egl
             android
         )
@@ -181,15 +183,15 @@ if (ENABLE_EGL)
         add_custom_target(copyAndroidStuff
                 COMMAND ${CMAKE_COMMAND} -E remove_directory "${ANDROID_BUILD_DIR}"
                 COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/android" "${ANDROID_BUILD_DIR}"
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${ANDROID_BUILD_DIR}/libs"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${ANDROID_BUILD_DIR}/libs/${ANDROID_NDK_ABI_NAME}"
 
 # FIX ME
 # According to android.toolchain.cmake decumentation the android libs should be putted to ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ANDROID_NDK_ABI_NAME}
 # but android.toolchain.cmake sees LIBRARY_OUTPUT_PATH_ROOT as CMAKE_SOURCE_DIR and this CMakeLists.txt file sees it as ANDROID_BUILD_DIR ;-(
 # so, I must use ${CMAKE_SOURCE_DIR}/libs/${ANDROID_NDK_ABI_NAME} insted of ${LIBRARY_OUTPUT_PATH_ROOT}/libs/${ANDROID_NDK_ABI_NAME} ...
 
-                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/libs/${ANDROID_NDK_ABI_NAME}/libgnustl_shared.so" "${ANDROID_BUILD_DIR}/libs/libgnustl_shared.so"
-                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/libs/${ANDROID_NDK_ABI_NAME}/libretrace.so" "${ANDROID_BUILD_DIR}/libs"
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/libs/${ANDROID_NDK_ABI_NAME}/libgnustl_shared.so" "${ANDROID_BUILD_DIR}/libs/${ANDROID_NDK_ABI_NAME}/"
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/libs/${ANDROID_NDK_ABI_NAME}/libretrace.so" "${ANDROID_BUILD_DIR}/libs/${ANDROID_NDK_ABI_NAME}/"
                 DEPENDS retrace
         )
 

@@ -22,7 +22,9 @@ SOURCES += \
         $$PWD/../dispatch/glproc.cpp
 
 SOURCES += \
-        $$PWD/../helpers/eglsize.cpp
+        $$PWD/../helpers/eglsize.cpp \
+        $$PWD/../helpers/glprofile.cpp
+
 
 SOURCES += \
         $$PWD/../common/highlight.cpp \

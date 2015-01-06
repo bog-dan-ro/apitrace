@@ -123,6 +123,40 @@ private:
     int m_fd = -1;
 };
 
+static EGLenum
+translateAPI(glprofile::Profile profile)
+{
+    switch (profile.api) {
+    case glprofile::API_GL:
+        return EGL_OPENGL_API;
+    case glprofile::API_GLES:
+        return EGL_OPENGL_ES_API;
+    default:
+        assert(0);
+        return EGL_NONE;
+    }
+}
+
+
+/* Must be called before
+ *
+ * - eglCreateContext
+ * - eglGetCurrentContext
+ * - eglGetCurrentDisplay
+ * - eglGetCurrentSurface
+ * - eglMakeCurrent (when its ctx parameter is EGL_NO_CONTEXT ),
+ * - eglWaitClient
+ * - eglWaitNative
+ */
+static void
+bindAPI(EGLenum api)
+{
+    if (eglBindAPI(api) != EGL_TRUE) {
+        std::cerr << "error: eglBindAPI failed\n";
+        exit(1);
+    }
+}
+
 struct EglVisual : public Visual
 {
     EglVisual(Profile prof) : Visual(prof) {}
@@ -215,7 +249,7 @@ public:
     {
         if (update())
             recreate();
-        eglBindAPI(api);
+        bindAPI(api);
         eglSwapBuffers(eglDisplay, surface);
     }
 
@@ -251,7 +285,7 @@ private:
 
 public:
     EGLSurface surface;
-    EGLint api;
+    EGLenum api;
 
 private:
     AndroidWindow window;
@@ -347,22 +381,27 @@ Visual *createVisual(bool /*doubleBuffer*/, unsigned samples, Profile profile)
     };
     const EGLint *api_bits;
 
-    switch(profile) {
-    default:
-        if (!has_EGL_KHR_create_context) {
+    if (profile.api == glprofile::API_GL) {
+        api_bits = api_bits_gl;
+        if (profile.core && !has_EGL_KHR_create_context) {
             return NULL;
         }
-        /* pass-through */
-    case PROFILE_COMPAT:
-        api_bits = api_bits_gl;
-        break;
-    case PROFILE_ES1:
-        api_bits = api_bits_gles1;
-        break;
-    case PROFILE_ES2:
-        api_bits = api_bits_gles2;
-        break;
-    };
+    } else if (profile.api == glprofile::API_GLES) {
+        switch (profile.major) {
+        case 1:
+            api_bits = api_bits_gles1;
+            break;
+        case 2:
+        case 3:
+            api_bits = api_bits_gles2;
+            break;
+        default:
+            return NULL;
+        }
+    } else {
+        assert(0);
+        return NULL;
+    }
 
     for (int i = 0; i < 7; i++) {
         Attributes<EGLint> attribs;
@@ -396,23 +435,6 @@ Drawable *createDrawable(const Visual *visual, int width, int height, bool pbuff
     return new EglDrawable(visual, width, height, pbuffer);
 }
 
-bool bindApi(Api api)
-{
-    EGLenum eglApi;
-    switch (api) {
-    case API_GL:
-        eglApi = EGL_OPENGL_API;
-        break;
-    case API_GLES:
-        eglApi = EGL_OPENGL_ES_API;
-        break;
-    default:
-        assert(0);
-        return false;
-    }
-
-    return eglBindAPI(eglApi);
-}
 
 Context *createContext(const Visual *_visual, Context *shareContext, bool debug)
 {
@@ -426,32 +448,26 @@ Context *createContext(const Visual *_visual, Context *shareContext, bool debug)
         share_context = static_cast<EglContext*>(shareContext)->context;
     }
 
-    EGLint api = eglQueryAPI();
-
-    ProfileDesc desc;
-    getProfileDesc(profile, desc);
-
-    switch (profile) {
-    case PROFILE_COMPAT:
-        eglBindAPI(EGL_OPENGL_API);
-        break;
-    case PROFILE_ES1:
-        eglBindAPI(EGL_OPENGL_ES_API);
-        break;
-    case PROFILE_ES2:
-        eglBindAPI(EGL_OPENGL_ES_API);
-        attribs.add(EGL_CONTEXT_CLIENT_VERSION, 2);
-        break;
-    default:
+    if (profile.api == glprofile::API_GL) {
         if (has_EGL_KHR_create_context) {
-            attribs.add(EGL_CONTEXT_MAJOR_VERSION_KHR, desc.major);
-            attribs.add(EGL_CONTEXT_MINOR_VERSION_KHR, desc.minor);
-            if (desc.core) {
-                attribs.add(EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR);
-            }
-        } else {
+            attribs.add(EGL_CONTEXT_MAJOR_VERSION_KHR, profile.major);
+            attribs.add(EGL_CONTEXT_MINOR_VERSION_KHR, profile.minor);
+            int profileMask = profile.core ? EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR : EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR;
+            attribs.add(EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, profileMask);
+        } else if (profile.versionGreaterOrEqual(3, 2)) {
+            std::cerr << "error: EGL_KHR_create_context not supported\n";
             return NULL;
         }
+    } else if (profile.api == glprofile::API_GLES) {
+        if (has_EGL_KHR_create_context) {
+            attribs.add(EGL_CONTEXT_MAJOR_VERSION_KHR, profile.major);
+            attribs.add(EGL_CONTEXT_MINOR_VERSION_KHR, profile.minor);
+        } else {
+            attribs.add(EGL_CONTEXT_CLIENT_VERSION, profile.major);
+        }
+    } else {
+        assert(0);
+        return NULL;
     }
 
     if (debug && has_EGL_KHR_create_context) {
@@ -459,6 +475,9 @@ Context *createContext(const Visual *_visual, Context *shareContext, bool debug)
     }
 
     attribs.end(EGL_NONE);
+
+    EGLenum api = translateAPI(profile);
+    bindAPI(api);
 
     context = eglCreateContext(eglDisplay, visual->config, share_context, attribs);
     if (!context) {
@@ -469,8 +488,6 @@ Context *createContext(const Visual *_visual, Context *shareContext, bool debug)
         }
         return NULL;
     }
-
-    eglBindAPI(api);
 
     return new EglContext(visual, context);
 }
@@ -484,15 +501,13 @@ bool makeCurrent(Drawable *drawable, Context *context)
         EglContext *eglContext = static_cast<EglContext *>(context);
         EGLBoolean ok;
 
+        EGLenum api = translateAPI(eglContext->profile);
+        bindAPI(api);
+
         ok = eglMakeCurrent(eglDisplay, eglDrawable->surface,
                             eglDrawable->surface, eglContext->context);
 
         if (ok) {
-            EGLint api;
-
-            eglQueryContext(eglDisplay, eglContext->context,
-                            EGL_CONTEXT_CLIENT_TYPE, &api);
-
             eglDrawable->api = api;
         }
 
