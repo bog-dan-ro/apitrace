@@ -40,8 +40,9 @@ public:
     bool isProfilingGpu() const;
     bool isProfilingCpu() const;
     bool isProfilingPixels() const;
+    bool isProfilingMemory() const;
     bool isProfiling() const;
-    void setProfiling(bool gpu, bool cpu, bool pixels);
+    void setProfiling(bool gpu, bool cpu, bool pixels, bool memory);
 
     void setCaptureAtCallNumber(qlonglong num);
     qlonglong captureAtCallNumber() const;
@@ -51,6 +52,8 @@ public:
 
     bool captureThumbnails() const;
     void setCaptureThumbnails(bool enable);
+
+    QStringList retraceArguments() const;
 
 signals:
     void finished(const QString &output);
@@ -77,6 +80,7 @@ private:
     bool m_profileGpu;
     bool m_profileCpu;
     bool m_profilePixels;
+    bool m_profileMemory;
 };
 
 #endif

@@ -60,9 +60,10 @@
       <iconset resource="../qapitrace.qrc">
        <normaloff>:/resources/android.png</normaloff>:/resources/android.png</iconset>
      </property>
-     <addaction name="actionPull_trace"/>
-     <addaction name="actionPush_trace"/>
-     <addaction name="actionLink_trace"/>
+     <addaction name="actionPullTrace"/>
+     <addaction name="actionPushTrace"/>
+     <addaction name="actionLinkTrace"/>
+     <addaction name="actionRetraceOnAndroid"/>
     </widget>
     <addaction name="actionNew"/>
     <addaction name="actionOpen"/>
@@ -718,7 +719,7 @@
     <string>Ctrl+P</string>
    </property>
   </action>
-  <action name="actionPull_trace">
+  <action name="actionPullTrace">
    <property name="icon">
     <iconset resource="../qapitrace.qrc">
      <normaloff>:/resources/go-bottom.png</normaloff>:/resources/go-bottom.png</iconset>
@@ -727,7 +728,7 @@
     <string>Pull trace</string>
    </property>
   </action>
-  <action name="actionPush_trace">
+  <action name="actionPushTrace">
    <property name="icon">
     <iconset resource="../qapitrace.qrc">
      <normaloff>:/resources/go-top.png</normaloff>:/resources/go-top.png</iconset>
@@ -736,7 +737,7 @@
     <string>Push trace</string>
    </property>
   </action>
-  <action name="actionLink_trace">
+  <action name="actionLinkTrace">
    <property name="icon">
     <iconset resource="../qapitrace.qrc">
      <normaloff>:/resources/android-setup.png</normaloff>:/resources/android-setup.png</iconset>
@@ -752,6 +753,14 @@
    </property>
    <property name="text">
     <string>Setup</string>
+   </property>
+  </action>
+  <action name="actionRetraceOnAndroid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Retrace on Android</string>
    </property>
   </action>
   <zorder>stateDock</zorder>
