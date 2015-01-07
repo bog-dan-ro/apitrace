@@ -324,7 +324,5 @@ bool AndroidRetracer::setup(QString *error)
         return false;
     }
 
-    m_androidUtils.ls(_("/sdcard/0ad/appdata/logs/pyrogenesis.trace"));
-    m_androidUtils.updateFile(_("/home/bogdan/pyrogenesis.trace"), _("/sdcard/0ad/appdata/logs/pyrogenesis.trace"), AndroidUtils::PullFromDeviceToLocal);
     return true;
 }
